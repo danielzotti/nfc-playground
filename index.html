@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>NFC Playground</title>
+    <meta name="viewport" content="width=device-width">
+    <script src="index.js"></script>
+</head>
+<body>
+<h1>NFC Playground</h1>
+
+<h3>Read NFC</h3>
+<button id="btn-start-read">Start reading</button>
+<button id="btn-stop-read">Stop reading</button>
+
+<div>
+    <h4>Messages
+        <button id="btn-clear-messages">Clear</button>
+    </h4>
+    <ul id="messages" style="max-height: 200px;overflow: auto;"></ul>
+</div>
+
+<h3>Write NFC</h3>
+<textarea id="nfc-content" placeholder="One record per line" style="width:100%; min-height:100px;"></textarea>
+<button id="btn-start-write">Start writing</button>
+<button id="btn-stop-write">Stop writing</button>
+
+<script>
+    const startReadButton = document.querySelector("#btn-start-read");
+    const stopReadButton = document.querySelector("#btn-stop-read");
+    const startWriteButton = document.querySelector("#btn-start-write");
+    const stopWriteButton = document.querySelector("#btn-stop-write");
+
+    const clearMessagesButton = document.querySelector("#btn-clear-messages");
+    const messagesEl = document.querySelector("#messages");
+
+    const nfcContentEl = document.querySelector("#nfc-content");
+
+    let readingAbortController;
+    let writingAbortController;
+
+
+    let isReading = false;
+    let isWriting = false;
+
+    stopReadButton.style.display = "none";
+    stopWriteButton.style.display = "none";
+
+    if (!'NDEFReader' in window) {
+        printMessage("NFC is not supported");
+        throw new Error("NFC not supported by this device. Use Chrome on Android!");
+    }
+
+    clearMessagesButton.addEventListener("click", clearMessages)
+
+    startReadButton.addEventListener("click", startReading);
+
+    stopReadButton.addEventListener("click", stopReading);
+
+    startWriteButton.addEventListener("click", startWriting);
+
+    stopWriteButton.addEventListener("click", stopWriting);
+
+    function printMessage(message) {
+        if (!message) {
+            return;
+        }
+        if (typeof message === "object") {
+            message = JSON.stringify(message, null, 2)
+        }
+        messagesEl.innerHTML += `<li>${message}</li>`;
+        messagesEl.scrollTop = messagesEl.scrollHeight;
+    }
+
+    function clearMessages() {
+        messagesEl.innerHTML = "";
+    }
+
+    async function startReading() {
+        isReading = true;
+        if (isWriting) {
+            stopWriting();
+        }
+        try {
+            readingAbortController = new AbortController();
+            const ndef = new NDEFReader();
+            await ndef.scan({signal: readingAbortController.signal});
+            stopReadButton.style.display = "initial";
+            startReadButton.style.display = "none";
+            printMessage("Starting reading...");
+
+            ndef.addEventListener("readingerror", () => {
+                printMessage("Can't read the smart tag, I'm sorry!");
+            });
+
+            ndef.addEventListener("reading", ({message, serialNumber}) => {
+                const textDecoder = new TextDecoder();
+                const data = message.records.map(record => `<li>${textDecoder.decode(record.data)}</li>`).join("");
+                printMessage(`<li>Records for ${serialNumber}:<ol>${data}</ol></li>`);
+            });
+        } catch (error) {
+            printMessage("Error on reading");
+            console.error(error)
+        }
+    }
+
+    function stopReading() {
+        if (isReading) {
+            readingAbortController?.abort("Stop reading");
+        }
+        startReadButton.style.display = "initial";
+        stopReadButton.style.display = "none";
+        printMessage("Stopping reading...");
+        isReading = false;
+    }
+
+    async function startWriting() {
+        isWriting = true;
+        startWriteButton.style.display = "none";
+        stopWriteButton.style.display = "initial";
+        nfcContentEl.disabled = true;
+        if (isReading) {
+            stopReading();
+        }
+        const text = nfcContentEl.value;
+
+        if (!text) {
+            printMessage(`Cannot save an empty content! Try to write something`);
+            stopWriting();
+            return;
+        }
+
+        const lines = text.split("\n").map(el => el.trim()).filter(el => !!el);
+        const records = lines.map(record => ({recordType: "text", data: record}));
+
+        if (records.length === 0) {
+            printMessage(`Cannot save an empty content! Try to write something`);
+            console.log({records});
+            stopWriting();
+            return;
+        }
+        printMessage(`Waiting for writing "${text}" on NFC...`);
+
+        try {
+            writingAbortController = new AbortController();
+            const ndef = new NDEFReader();
+            await ndef.write({records: [...records]}, {signal: writingAbortController.signal});
+            printMessage(`Tag successfully written`);
+            nfcContentEl.value = "";
+        } catch (error) {
+            printMessage(`Error on writing on tag`);
+            console.error(error)
+        } finally {
+            startWriteButton.style.display = "initial";
+            stopWriteButton.style.display = "none";
+            isWriting = false;
+        }
+    }
+
+    function stopWriting() {
+        if (isWriting) {
+            writingAbortController?.abort("Stop writing");
+        }
+        startWriteButton.style.display = "initial";
+        stopWriteButton.style.display = "none";
+        nfcContentEl.disabled = false;
+        isWriting = false;
+    }
+
+
+</script>
+
+</body>
+</html>

@@ -1,0 +1,18 @@
+{
+  "name": "nfc-playground",
+  "version": "1.0.0",
+  "description": "A project to test the NFC browser API",
+  "scripts": {
+    "dev": "http-server -S -C ./certs/cert.pem -K ./certs/key.pem"
+  },
+  "keywords": [
+    "nfc",
+    "javascript",
+    "browser-api"
+  ],
+  "author": "Daniel Zotti",
+  "license": "ISC",
+  "devDependencies": {
+    "http-server": "^14.1.1"
+  }
+}
