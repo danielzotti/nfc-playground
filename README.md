@@ -1,9 +1,10 @@
 # NFC Playground
-A project to play with NFC
+A project to play with NFC in JavaScript
 
 ## Features
 - Read NFC tag content
-- Write a text on the NFC tag
+- Write records on a NFC tag
+  - Can be a text or a list of records (one record per row in a textarea)
 
 ## Test it on your local machine
 
