@@ -46,8 +46,8 @@
     stopWriteButton.style.display = "none";
 
     if (!('NDEFReader' in window)) {
-        printMessage("NFC is not supported");
-        throw new Error("NFC not supported by this device. Use Chrome on Android!");
+        printMessage("NFC is not supported by this device. Use Chrome on Android!");
+        throw new Error("NFC not supported!");
     }
 
     clearMessagesButton.addEventListener("click", clearMessages)
